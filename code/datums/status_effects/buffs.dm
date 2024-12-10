@@ -357,7 +357,10 @@
 	var/chem_per_tick = 1
 
 /datum/status_effect/changeling/on_apply()
-	return is_changeling(owner)
+	ling = is_changeling(owner)
+	if(!ling)
+		return FALSE
+	return TRUE
 
 /datum/status_effect/changeling/tick()
 	if(ling.chem_charges < chem_per_tick)
@@ -537,7 +540,6 @@
 	name = "Blessing of the Necropolis"
 	desc = "The power of the necropolis flows through you. You could get used to this..."
 	icon_state = "regenerative_core"
-	name = "Blessing of the Necropolis"
 
 /datum/status_effect/regenerative_core
 	id = "Regenerative Core"

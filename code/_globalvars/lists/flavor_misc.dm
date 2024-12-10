@@ -38,11 +38,20 @@ GLOBAL_LIST_EMPTY(wings_list)
 GLOBAL_LIST_EMPTY(wings_open_list)
 GLOBAL_LIST_EMPTY(r_wings_list)
 GLOBAL_LIST_EMPTY(moth_wings_list)
+GLOBAL_LIST_EMPTY(moth_wings_roundstart_list)//this lacks the blacklisted wings such as burned, clockwork and angel
+GLOBAL_LIST_EMPTY(moth_antennae_list)
+GLOBAL_LIST_EMPTY(moth_antennae_roundstart_list)//this lacks the blacklisted antennae such as burned, clockwork and angel
+GLOBAL_LIST_EMPTY(moth_markings_list)
+GLOBAL_LIST_EMPTY(moth_markings_roundstart_list)//this lacks the blacklisted markings such as burned, clockwork and angel
+GLOBAL_LIST_EMPTY(moth_wingsopen_list)
 GLOBAL_LIST_EMPTY(caps_list)
 GLOBAL_LIST_EMPTY(ipc_screens_list)
 GLOBAL_LIST_EMPTY(ipc_antennas_list)
 GLOBAL_LIST_EMPTY(ipc_chassis_list)
 GLOBAL_LIST_EMPTY(insect_type_list)
+GLOBAL_LIST_EMPTY(apid_antenna_list)
+GLOBAL_LIST_EMPTY(apid_stripes_list)
+GLOBAL_LIST_EMPTY(apid_headstripes_list)
 
 GLOBAL_LIST_INIT(color_list_ethereal, list(
 	"Red" = "ff3131",
@@ -66,7 +75,32 @@ GLOBAL_LIST_INIT(color_list_ethereal, list(
 	"Gray" = "979497"))
 
 GLOBAL_LIST_INIT(ghost_forms_with_directions_list, list("ghost")) //stores the ghost forms that support directional sprites
-GLOBAL_LIST_INIT(ghost_forms_with_accessories_list, list("ghost")) //stores the ghost forms that support hair and other such things
+GLOBAL_LIST_INIT(ghost_forms_with_accessories_list, list(
+	"ghost",
+	"ghost_red",
+	"ghost_black",
+	"ghost_blue",
+	"ghost_yellow",
+	"ghost_green",
+	"ghost_pink",
+	"ghost_cyan",
+	"ghost_dblue",
+	"ghost_dred",
+	"ghost_dgreen",
+	"ghost_dcyan",
+	"ghost_grey",
+	"ghost_dyellow",
+	"ghost_dpink",
+	"skeleghost",
+	"ghost_purpleswirl",
+	"ghost_rainbow",
+	"ghost_fire",
+	"ghost_funkypurp",
+	"ghost_pinksherbert",
+	"ghost_blazeit",
+	"ghost_mellow",
+	"ghost_camo",))
+	//stores the ghost forms that support hair and other such things
 
 GLOBAL_LIST_INIT(ai_core_display_screens, sortList(list(
 	":thinking:",
@@ -218,3 +252,31 @@ GLOBAL_LIST_INIT(numbers_as_words, world.file2list("strings/numbers_as_words.txt
 GLOBAL_LIST_INIT(station_numerals, greek_letters + phonetic_alphabet + numbers_as_words + generate_number_strings())
 
 GLOBAL_LIST_INIT(admiral_messages, list("Do you know how expensive these stations are?","Stop wasting my time.","I was sleeping, thanks a lot.","Stand and fight you cowards!","You knew the risks coming in.","Stop being paranoid.","Whatever's broken just build a new one.","No.", "<i>null</i>","<i>Error: No comment given.</i>", "It's a good day to die!"))
+
+GLOBAL_LIST_INIT(junkmail_messages, world.file2list("strings/junkmail.txt"))
+
+GLOBAL_LIST_INIT(pAI_faces_list, list(
+		"What" = "what",
+		"Sad" = "sad",
+		"Off" = "off",
+		"Laugh" = "laugh",
+		"Happy" = "happy",
+		"Face" = "face",
+		"Extremely Happy" = "extremely-happy",
+		"Cat" = "cat",
+		"Angry" = "angry",
+		"Sunglasses" = "sunglasses"
+	))
+
+GLOBAL_LIST_INIT(pAI_faces_icons, list(
+		"What" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-what"),
+		"Sad" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-sad"),
+		"Off" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-off"),
+		"Laugh" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-laugh"),
+		"Happy" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-happy"),
+		"Face" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-face"),
+		"Extremely Happy" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-happy"),
+		"Cat" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-cat"),
+		"Angry" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-angry"),
+		"Sunglasses" = image(icon = 'icons/obj/aicards.dmi', icon_state = "pai-sunglasses")
+	))

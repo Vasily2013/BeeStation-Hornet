@@ -112,6 +112,12 @@ SUBSYSTEM_DEF(mapping)
 	initialize_reserved_level(transit.z_value)
 	return ..()
 
+/datum/controller/subsystem/mapping/get_metrics()
+	. = ..()
+	var/list/custom = list()
+	custom["map"] = config.map_name
+	.["custom"] = custom
+
 /datum/controller/subsystem/mapping/proc/wipe_reservations(wipe_safety_delay = 100)
 	if(clearing_reserved_turfs || !initialized)			//in either case this is just not needed.
 		return
@@ -123,7 +129,7 @@ SUBSYSTEM_DEF(mapping)
 		var/obj/docking_port/stationary/transit/T = i
 		if(!istype(T))
 			continue
-		in_transit[T] = T.get_docked()
+		in_transit[T] = T.docked
 	var/go_ahead = world.time + wipe_safety_delay
 	if(in_transit.len)
 		message_admins("Shuttles in transit detected. Attempting to fast travel. Timeout is [wipe_safety_delay/10] seconds.")
@@ -226,7 +232,7 @@ SUBSYSTEM_DEF(mapping)
 	//Shared orbital body
 	var/datum/orbital_object/z_linked/orbital_body = new orbital_body_type()
 	for(var/datum/space_level/level as() in space_levels)
-		level.orbital_body = orbital_body
+		SSorbits.assoc_z_levels["[level.z_value]"] = orbital_body
 		orbital_body.link_to_z(level)
 
 	// load the maps
@@ -246,7 +252,7 @@ SUBSYSTEM_DEF(mapping)
 		shuffle_inplace(random_room_templates)
 		for(var/ID in random_room_templates)
 			candidate = random_room_templates[ID]
-			if(candidate.spawned || R.room_height != candidate.template_height || R.room_width != candidate.template_width)
+			if((!R.rooms.len && candidate.spawned) || (!R.rooms.len && (R.room_height != candidate.template_height || R.room_width != candidate.template_width)) || (R.rooms.len && !(candidate.room_id in R.rooms)))
 				candidate = null
 				continue
 			possibletemplates[candidate] = candidate.weight

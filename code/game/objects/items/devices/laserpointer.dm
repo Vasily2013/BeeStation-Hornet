@@ -80,9 +80,9 @@
 	if(HAS_TRAIT(user, TRAIT_NOGUNS))
 		to_chat(user, "<span class='warning'>Your fingers can't press the button!</span>")
 		return
-	if(ishuman(user))
-		var/mob/living/carbon/human/H = user
-		if(H.dna.check_mutation(HULK))
+	if(user.has_dna())
+		var/mob/living/carbon/C = user
+		if(C.dna.check_mutation(HULK))
 			to_chat(user, "<span class='warning'>Your fingers can't press the button!</span>")
 			return
 
@@ -142,7 +142,7 @@
 		if(M.incapacitated())
 			return
 		var/mob/living/carbon/human/H = M
-		if(iscatperson(H) && !H.eye_blind) //catpeople!
+		if(iscatperson(H) && !H.is_blind()) //catpeople!
 			if(user.mobility_flags & MOBILITY_STAND)
 				H.setDir(get_dir(H,targloc)) // kitty always looks at the light
 				if(prob(effectchance))

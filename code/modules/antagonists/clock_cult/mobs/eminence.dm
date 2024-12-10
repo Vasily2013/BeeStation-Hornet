@@ -1,5 +1,5 @@
 /mob/living/simple_animal/eminence
-	name = "\the Eminence"
+	name = "the Eminence"
 	desc = "A glowing ball of light."
 	icon = 'icons/effects/clockwork_effects.dmi'
 	icon_state = "eminence"
@@ -8,7 +8,7 @@
 	invisibility = INVISIBILITY_OBSERVER
 	health = INFINITY
 	maxHealth = INFINITY
-	layer = GHOST_LAYER
+	plane = GHOST_PLANE
 	healable = FALSE
 	spacewalk = TRUE
 	sight = SEE_SELF
@@ -68,6 +68,9 @@
 
 /mob/living/simple_animal/eminence/start_pulling(atom/movable/AM, state, force = move_force, supress_message = FALSE)
 	return FALSE
+
+/mob/living/simple_animal/eminence/rad_act(amount)
+	return
 
 /mob/living/simple_animal/eminence/Initialize(mapload)
 	. = ..()
@@ -136,6 +139,9 @@
 	return tab_data
 
 /mob/living/simple_animal/eminence/update_health_hud()
+	return
+
+/mob/living/simple_animal/eminence/flash_act(intensity, override_blindness_check, affect_silicon, visual, type)
 	return
 
 //Eminence abilities

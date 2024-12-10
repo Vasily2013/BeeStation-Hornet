@@ -4,6 +4,7 @@
 	icon = 'icons/mob/human.dmi'
 	icon_state = ""
 	appearance_flags = KEEP_TOGETHER|TILE_BOUND|PIXEL_SCALE
+	COOLDOWN_DECLARE(special_emote_cooldown)
 
 /mob/living/carbon/human/Initialize(mapload)
 	add_verb(/mob/living/proc/mob_sleep)
@@ -35,6 +36,7 @@
 	)
 	AddElement(/datum/element/connect_loc, loc_connections)
 	AddElement(/datum/element/strippable, GLOB.strippable_human_items, /mob/living/carbon/human/.proc/should_strip, GLOB.strippable_human_layout)
+	AddElement(/datum/element/mechanical_repair)
 
 /mob/living/carbon/human/proc/setup_human_dna()
 	//initialize dna. for spawned humans; overwritten by other code
@@ -122,10 +124,6 @@
 		if(changeling)
 			tab_data["Chemical Storage"] = GENERATE_STAT_TEXT("[changeling.chem_charges]/[changeling.chem_storage]")
 			tab_data["Absorbed DNA"] = GENERATE_STAT_TEXT("[changeling.absorbedcount]")
-		var/datum/antagonist/hivemind/hivemind = mind.has_antag_datum(/datum/antagonist/hivemind)
-		if(hivemind)
-			tab_data["Hivemind Vessels"] = GENERATE_STAT_TEXT("[hivemind.hive_size] (+[hivemind.size_mod])")
-			tab_data["Psychic Link Duration"] = GENERATE_STAT_TEXT("[(hivemind.track_bonus + TRACKER_DEFAULT_TIME)/10] seconds")
 	return tab_data
 
 // called when something steps onto a human
@@ -328,16 +326,16 @@
 					return
 				fine = min(fine, maxFine)
 
-				var/crime = GLOB.data_core.createCrimeEntry(t1, "", allowed_access, station_time_timestamp(), fine)
-				for (var/obj/item/pda/P in GLOB.PDAs)
-					if(P.owner == R.fields["name"])
+				var/datum/data/crime/crime = GLOB.data_core.createCrimeEntry(t1, "", allowed_access, station_time_timestamp(), fine)
+				for (var/obj/item/modular_computer/tablet in GLOB.TabletMessengers)
+					if(tablet.saved_identification == R.fields["name"])
 						var/message = "You have been fined [fine] credits for '[t1]'. Fines may be paid at security."
-						var/datum/signal/subspace/messaging/pda/signal = new(src, list(
+						var/datum/signal/subspace/messaging/tablet_msg/signal = new(src, list(
 							"name" = "Security Citation",
 							"job" = "Citation Server",
 							"message" = message,
-							"targets" = list("[P.owner] ([P.ownjob])"),
-							"automated" = 1
+							"targets" = list(tablet),
+							"automated" = TRUE
 						))
 						signal.send_to_receivers()
 						usr.log_message("(PDA: Citation Server) sent \"[message]\" to [signal.format_target()]", LOG_PDA)
@@ -406,44 +404,49 @@
 /mob/living/carbon/human/proc/canUseHUD()
 	return (mobility_flags & MOBILITY_USE)
 
-/mob/living/carbon/human/can_inject(mob/user, error_msg, target_zone, var/penetrate_thick = 0)
-	. = 1 // Default to returning true.
+/mob/living/carbon/human/can_inject(mob/user, error_msg, target_zone, penetrate_thick = FALSE)
+	if(HAS_TRAIT(src, TRAIT_PIERCEIMMUNE))
+		return FALSE
+	if(penetrate_thick)
+		return TRUE
+
 	if(!target_zone)
 		if(user)
 			target_zone = user.zone_selected
 		else
 			target_zone = BODY_ZONE_CHEST
-	if(HAS_TRAIT(src, TRAIT_PIERCEIMMUNE))
-		. = 0
 	// If targeting the head, see if the head item is thin enough.
 	// If targeting anything else, see if the wear suit is thin enough.
-	if (!penetrate_thick)
-		if(above_neck(target_zone))
-			if(head && isclothing(head))
-				var/obj/item/clothing/head/CH = head
-				if(CH.clothing_flags & THICKMATERIAL)
-					balloon_alert(user, "There is no exposed flesh on [p_their()] head")
+	if(above_neck(target_zone))
+		if(!head || !isclothing(head))
+			return TRUE
+		var/obj/item/clothing/head/CH = head
+		if(CH.clothing_flags & THICKMATERIAL)
+			balloon_alert(user, "There is no exposed flesh on [p_their()] head.")
+			return FALSE
+		return TRUE
+	if(!wear_suit || !isclothing(wear_suit))
+		return TRUE
+	var/obj/item/clothing/suit/CS = wear_suit
+	if(CS.clothing_flags & THICKMATERIAL)
+		switch(target_zone)
+			if(BODY_ZONE_CHEST)
+				if(CS.body_parts_covered & CHEST)
+					balloon_alert(user, "There is no exposed flesh on [p_their()] chest.")
 					return FALSE
-		if(wear_suit && isclothing(wear_suit))
-			var/obj/item/clothing/suit/CS = wear_suit
-			if(CS.clothing_flags & THICKMATERIAL)
-				switch(target_zone)
-					if(BODY_ZONE_CHEST)
-						if(CS.body_parts_covered & CHEST)
-							balloon_alert(user, "There is no exposed flesh on this chest")
-							return FALSE
-					if(BODY_ZONE_PRECISE_GROIN)
-						if(CS.body_parts_covered & GROIN)
-							balloon_alert(user, "There is no exposed flesh on this groin")
-							return FALSE
-					if(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM)
-						if(CS.body_parts_covered & ARMS)
-							balloon_alert(user, "There is no exposed flesh on these arms")
-							return FALSE
-					if(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG)
-						if(CS.body_parts_covered & LEGS)
-							balloon_alert(user, "There is no exposed flesh on these legs")
-							return FALSE
+			if(BODY_ZONE_PRECISE_GROIN)
+				if(CS.body_parts_covered & GROIN)
+					balloon_alert(user, "There is no exposed flesh on [p_their()] groin.")
+					return FALSE
+			if(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM)
+				if(CS.body_parts_covered & ARMS)
+					balloon_alert(user, "There is no exposed flesh on [p_their()] arms.")
+					return FALSE
+			if(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG)
+				if(CS.body_parts_covered & LEGS)
+					balloon_alert(user, "There is no exposed flesh on [p_their()] legs.")
+					return FALSE
+	return TRUE
 
 /mob/living/carbon/human/assess_threat(judgment_criteria, lasercolor = "", datum/callback/weaponcheck=null)
 	if(judgment_criteria & JUDGE_EMAGGED)
@@ -719,10 +722,12 @@
 	if(admin_revive)
 		regenerate_limbs()
 		regenerate_organs()
+		if(ismoth(src))
+			REMOVE_TRAIT(src, TRAIT_MOTH_BURNT, "fire")
 	remove_all_embedded_objects()
 	set_heartattack(FALSE)
 	drunkenness = 0
-	for(var/datum/mutation/human/HM in dna.mutations)
+	for(var/datum/mutation/HM as() in dna.mutations)
 		if(HM.quality != POSITIVE)
 			dna.remove_mutation(HM.name)
 	..()
@@ -1075,18 +1080,10 @@
 	return ..()
 
 /mob/living/carbon/human/ZImpactDamage(turf/T, levels)
-	//Non cat-people smash into the ground
-	if(!iscatperson(src))
+	var/datum/species/species_datum = dna?.species
+	if(!istype(species_datum))
 		return ..()
-	//Check to make sure legs are working
-	var/obj/item/bodypart/left_leg = get_bodypart(BODY_ZONE_L_LEG)
-	var/obj/item/bodypart/right_leg = get_bodypart(BODY_ZONE_R_LEG)
-	if(!left_leg || !right_leg || left_leg.disabled || right_leg.disabled)
-		return ..()
-	//Nailed it!
-	visible_message("<span class='notice'>[src] lands elegantly on [p_their()] feet!</span>",
-		"<span class='warning'>You fall [levels] level[levels > 1 ? "s" : ""] into [T], perfecting the landing!</span>")
-	Stun(levels * 50)
+	species_datum.z_impact_damage(src, T, levels)
 
 /mob/living/carbon/human/proc/stub_toe(var/power)
 	if(HAS_TRAIT(src, TRAIT_LIGHT_STEP))
@@ -1096,6 +1093,24 @@
 		src.emote("scream")
 	src.apply_damage(power, BRUTE, def_zone = pick(BODY_ZONE_PRECISE_R_FOOT, BODY_ZONE_PRECISE_L_FOOT))
 	src.Paralyze(10 * power)
+
+/mob/living/carbon/human/proc/copy_features(var/datum/character_save/CS)
+	dna.features = CS.features
+	gender = CS.gender
+	age = CS.age
+	underwear = CS.underwear
+	underwear_color = CS.underwear_color
+	undershirt = CS.undershirt
+	socks = CS.socks
+	hair_style = CS.hair_style
+	hair_color = CS.hair_color
+	gradient_color = CS.gradient_color
+	gradient_style = CS.gradient_style
+	facial_hair_style = CS.facial_hair_style
+	facial_hair_color = CS.facial_hair_color
+	skin_tone = CS.skin_tone
+	eye_color = CS.eye_color
+	updateappearance(TRUE, TRUE, TRUE)
 
 /mob/living/carbon/human/monkeybrain
 	ai_controller = /datum/ai_controller/monkey
@@ -1275,3 +1290,6 @@
 
 /mob/living/carbon/human/species/zombie/krokodil_addict
 	race = /datum/species/human/krokodil_addict
+
+/mob/living/carbon/human/species/pumpkin_man
+	race = /datum/species/pod/pumpkin_man

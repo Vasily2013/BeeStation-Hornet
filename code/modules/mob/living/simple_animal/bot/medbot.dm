@@ -75,13 +75,13 @@ GLOBAL_VAR(medibot_unique_id_gen)
 /mob/living/simple_animal/bot/medbot/mysterious
 	name = "\improper Mysterious Medibot"
 	desc = "International Medibot of mystery."
-	skin = "bezerk"
+	skin = MEDBOT_SKIN_BEZERK
 	heal_amount = 10
 
 /mob/living/simple_animal/bot/medbot/derelict
 	name = "\improper Old Medibot"
 	desc = "Looks like it hasn't been modified since the late 2080s."
-	skin = "bezerk"
+	skin = MEDBOT_SKIN_BEZERK
 	heal_threshold = 0
 	declare_crit = 0
 	heal_amount = 5
@@ -106,7 +106,7 @@ GLOBAL_VAR(medibot_unique_id_gen)
 
 /mob/living/simple_animal/bot/medbot/Initialize(mapload, new_skin)
 	. = ..()
-	var/datum/job/doctor/J = new /datum/job/doctor
+	var/datum/job/medical_doctor/J = new /datum/job/medical_doctor
 	access_card.access += J.get_access()
 	prev_access = access_card.access
 	qdel(J)
@@ -215,7 +215,7 @@ GLOBAL_VAR(medibot_unique_id_gen)
 	if(health < current_health) //if medbot took some damage
 		step_to(src, (get_step_away(src,user)))
 
-/mob/living/simple_animal/bot/medbot/emag_act(mob/user)
+/mob/living/simple_animal/bot/medbot/on_emag(atom/target, mob/user)
 	..()
 	if(emagged == 2)
 		declare_crit = 0

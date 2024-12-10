@@ -22,12 +22,8 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 	var/exotic_bloodtype = "" //If your race uses a non standard bloodtype (A+, O-, AB-, etc)
 	var/meat = /obj/item/reagent_containers/food/snacks/meat/slab/human //What the species drops on gibbing
 	var/skinned_type
-	var/liked_food = NONE
-	var/disliked_food = GROSS
-	var/toxic_food = TOXIC
 	var/list/no_equip = list()	// slots the race can't equip stuff to
 	var/nojumpsuit = 0	// this is sorta... weird. it basically lets you equip stuff that usually needs jumpsuits without one, like belts and pockets and ids
-	var/say_mod = "says"	// affects the speech message
 	var/species_language_holder = /datum/language_holder
 	var/list/default_features = list("body_size" = "Normal") // Default mutant bodyparts for this species. Don't forget to set one for every mutant bodypart you allow this species to have.
 	var/list/forced_features = list()	// A list of features forced on characters
@@ -103,6 +99,9 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 	var/obj/item/bodypart/species_r_arm = /obj/item/bodypart/r_arm
 	var/obj/item/bodypart/species_r_leg = /obj/item/bodypart/r_leg
 	var/obj/item/bodypart/species_l_leg = /obj/item/bodypart/l_leg
+
+	/// if false, having no tongue makes you unable to speak
+	var/speak_no_tongue = TRUE
 
 ///////////
 // PROCS //
@@ -230,6 +229,11 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 		QDEL_NULL(tail)
 	if(should_have_tail && !tail)
 		tail = new mutanttail()
+		if(islizard(C))
+			var/obj/item/organ/tail/lizard/lizard_tail = tail
+			lizard_tail.tail_type = C.dna.features["tail_lizard"]
+			lizard_tail.spines = C.dna.features["spines"]
+			tail = lizard_tail
 		tail.Insert(C)
 
 	if(wings && (!should_have_wings || replace_current))
@@ -237,6 +241,11 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 		QDEL_NULL(wings)
 	if(should_have_wings && !wings)
 		wings = new mutantwings()
+		if(ismoth(C))
+			wings.wing_type = C.dna.features["moth_wings"]
+			wings.flight_level = WINGS_FLIGHTLESS
+			if(locate(/datum/mutation/strongwings) in C.dna.mutations)
+				wings.flight_level = WINGS_FLYING
 		wings.Insert(C)
 
 	if(C.get_bodypart(BODY_ZONE_HEAD))
@@ -345,7 +354,7 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 	if(exotic_bloodtype && C.dna.blood_type != exotic_bloodtype)
 		C.dna.blood_type = exotic_bloodtype
 
-	if(old_species.mutanthands)
+	if(old_species?.mutanthands)
 		for(var/obj/item/I in C.held_items)
 			if(istype(I, old_species.mutanthands))
 				qdel(I)
@@ -615,9 +624,47 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 				eye_overlay.pixel_y += H.dna.species.offset_features[OFFSET_FACE][2]
 			standing += eye_overlay
 
+	//organic body markings
+	if(HAS_MARKINGS in species_traits)
+		var/obj/item/bodypart/chest/chest = H.get_bodypart(BODY_ZONE_CHEST)
+		var/obj/item/bodypart/r_arm/right_arm = H.get_bodypart(BODY_ZONE_R_ARM)
+		var/obj/item/bodypart/l_arm/left_arm = H.get_bodypart(BODY_ZONE_L_ARM)
+		var/obj/item/bodypart/r_leg/right_leg = H.get_bodypart(BODY_ZONE_R_LEG)
+		var/obj/item/bodypart/l_leg/left_leg = H.get_bodypart(BODY_ZONE_L_LEG)
+		var/datum/sprite_accessory/markings = GLOB.moth_markings_list[H.dna.features["moth_markings"]]
+		var/markings_icon_state = markings.icon_state
+		if(ismoth(H) && HAS_TRAIT(H, TRAIT_MOTH_BURNT))
+			markings_icon_state = "burnt_off"
+
+		if(!HAS_TRAIT(H, TRAIT_HUSK))
+			if(HD && (IS_ORGANIC_LIMB(HD)))
+				var/mutable_appearance/markings_head_overlay = mutable_appearance(markings.icon, "[markings_icon_state]_head", -BODY_LAYER)
+				standing += markings_head_overlay
+
+			if(chest && (IS_ORGANIC_LIMB(chest)))
+				var/mutable_appearance/markings_chest_overlay = mutable_appearance(markings.icon, "[markings_icon_state]_chest", -BODY_LAYER)
+				standing += markings_chest_overlay
+
+			if(right_arm && (IS_ORGANIC_LIMB(right_arm)))
+				var/mutable_appearance/markings_r_arm_overlay = mutable_appearance(markings.icon, "[markings_icon_state]_r_arm", -BODY_LAYER)
+				standing += markings_r_arm_overlay
+
+			if(left_arm && (IS_ORGANIC_LIMB(left_arm)))
+				var/mutable_appearance/markings_l_arm_overlay = mutable_appearance(markings.icon, "[markings_icon_state]_l_arm", -BODY_LAYER)
+				standing += markings_l_arm_overlay
+
+			if(right_leg && (IS_ORGANIC_LIMB(right_leg)))
+				var/mutable_appearance/markings_r_leg_overlay = mutable_appearance(markings.icon, "[markings_icon_state]_r_leg", -BODY_LAYER)
+				standing += markings_r_leg_overlay
+
+			if(left_leg && (IS_ORGANIC_LIMB(left_leg)))
+				var/mutable_appearance/markings_l_leg_overlay = mutable_appearance(markings.icon, "[markings_icon_state]_l_leg", -BODY_LAYER)
+				standing += markings_l_leg_overlay
+
+
 	//Underwear, Undershirts & Socks
 	if(!(NO_UNDERWEAR in species_traits))
-		if(H.underwear)
+		if(H.underwear && !(H.dna.species.bodytype & BODYTYPE_DIGITIGRADE))
 			var/datum/sprite_accessory/underwear/underwear = GLOB.underwear_list[H.underwear]
 			var/mutable_appearance/underwear_overlay
 			if(underwear)
@@ -694,7 +741,7 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 			bodyparts_to_add -= "waggingspines"
 
 	if("snout" in mutant_bodyparts) //Take a closer look at that snout!
-		if((H.wear_mask?.flags_inv & HIDEFACE) || (H.head?.flags_inv & HIDEFACE) || !HD)
+		if((H.wear_mask?.flags_inv & HIDESNOUT) || (H.head?.flags_inv & HIDESNOUT) || !HD)
 			bodyparts_to_add -= "snout"
 
 	if("frills" in mutant_bodyparts)
@@ -719,6 +766,10 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 		else if ("wings" in mutant_bodyparts)
 			bodyparts_to_add -= "wings_open"
 
+	if("moth_antennae" in mutant_bodyparts)
+		if(!H.dna.features["moth_antennae"] || H.dna.features["moth_antennae"] == "None" || !HD)
+			bodyparts_to_add -= "moth_antennae"
+
 	if("ipc_screen" in mutant_bodyparts)
 		if(!H.dna.features["ipc_screen"] || H.dna.features["ipc_screen"] == "None" || (H.wear_mask && (H.wear_mask.flags_inv & HIDEEYES)) || !HD)
 			bodyparts_to_add -= "ipc_screen"
@@ -727,6 +778,13 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 		if(!H.dna.features["ipc_antenna"] || H.dna.features["ipc_antenna"] == "None" || H.head && (H.head.flags_inv & HIDEHAIR) || (H.wear_mask && (H.wear_mask.flags_inv & HIDEHAIR)) || !HD)
 			bodyparts_to_add -= "ipc_antenna"
 
+	if("apid_antenna" in mutant_bodyparts)
+		if(!H.dna.features["apid_antenna"] || H.dna.features["apid_antenna"] == "None" || H.head && (H.head.flags_inv & HIDEHAIR) || (H.wear_mask && (H.wear_mask.flags_inv & HIDEHAIR)) || !HD)
+			bodyparts_to_add -= "apid_antenna"
+
+	if("apid_headstripe" in mutant_bodyparts)
+		if(!H.dna.features["apid_headstripe"] || H.dna.features["apid_headstripe"] == "None" || (H.wear_mask && (H.wear_mask.flags_inv & HIDEEYES)) || !HD)
+			bodyparts_to_add -= "apid_headstripe"
 
 	////PUT ALL YOUR WEIRD ASS REAL-LIMB HANDLING HERE
 	///Digi handling
@@ -794,7 +852,19 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 				if("legs")
 					S = GLOB.legs_list[H.dna.features["legs"]]
 				if("moth_wings")
-					S = GLOB.moth_wings_list[H.dna.features["moth_wings"]]
+					if(HAS_TRAIT(H, TRAIT_MOTH_BURNT))
+						S = GLOB.moth_wings_list["Burnt Off"]
+					else
+						S = GLOB.moth_wings_list[H.dna.features["moth_wings"]]
+				if("moth_antennae")
+					if(HAS_TRAIT(H, TRAIT_MOTH_BURNT))
+						S = GLOB.moth_antennae_list["Burnt Off"]
+					else
+						S = GLOB.moth_antennae_list[H.dna.features["moth_antennae"]]
+				if("moth_wingsopen")
+					S = GLOB.moth_wingsopen_list[H.dna.features["moth_wings"]]
+				if("moth_markings")
+					S = GLOB.moth_markings_list[H.dna.features["moth_markings"]]
 				if("caps")
 					S = GLOB.caps_list[H.dna.features["caps"]]
 				if("ipc_screen")
@@ -805,6 +875,12 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 					S = GLOB.ipc_chassis_list[H.dna.features["ipc_chassis"]]
 				if("insect_type")
 					S = GLOB.insect_type_list[H.dna.features["insect_type"]]
+				if("apid_antenna")
+					S = GLOB.apid_antenna_list[H.dna.features["apid_antenna"]]
+				if("apid_stripes")
+					S = GLOB.apid_stripes_list[H.dna.features["apid_stripes"]]
+				if("apid_headstripes")
+					S = GLOB.apid_headstripes_list[H.dna.features["apid_headstripes"]]
 			if(!S || S.icon_state == "none")
 				continue
 
@@ -1060,7 +1136,7 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 				if(!disable_warning)
 					to_chat(H, "The [I.name] is too big to attach.") //should be src?
 				return FALSE
-			if( istype(I, /obj/item/pda) || istype(I, /obj/item/pen) || is_type_in_list(I, H.wear_suit.allowed) )
+			if(istype(I, /obj/item/modular_computer/tablet) || istype(I, /obj/item/pen) || is_type_in_list(I, H.wear_suit.allowed))
 				return TRUE
 			return FALSE
 		if(ITEM_SLOT_HANDCUFFED)
@@ -1335,9 +1411,6 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 /datum/species/proc/spec_emp_act(mob/living/carbon/human/H, severity)
 	return
 
-/datum/species/proc/spec_emag_act(mob/living/carbon/human/H, mob/user)
-	return
-
 /datum/species/proc/spec_electrocute_act(mob/living/carbon/human/H, shock_damage, obj/source, siemens_coeff = 1, safety = 0, override = 0, tesla_shock = 0, illusion = 0, stun = TRUE)
 	return
 
@@ -1498,13 +1571,17 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 				target_pool = istype(target_shove_turf, /turf/open/indestructible/sound/pool) ? target_shove_turf : null
 				shove_blocked = TRUE
 
-		if(target.IsKnockdown() && !target.IsParalyzed())
-			target.Paralyze(SHOVE_CHAIN_PARALYZE)
-			target.visible_message("<span class='danger'>[user.name] kicks [target.name] onto [target.p_their()] side!</span>",
-				"<span class='danger'>[user.name] kicks you onto your side!</span>", null, COMBAT_MESSAGE_RANGE)
-			addtimer(CALLBACK(target, /mob/living/proc/SetKnockdown, 0), SHOVE_CHAIN_PARALYZE)
-			log_combat(user, target, "kicks", "onto their side (paralyzing)")
-
+		if(target.IsKnockdown())
+			var/target_held_item = target.get_active_held_item()
+			if(target_held_item)
+				target.visible_message("<span class='danger'>[user.name] kicks \the [target_held_item] out of [target]'s hand!</span>",
+									"<span class='danger'>[user.name] kicks \the [target_held_item] out of your hand!</span>", null, COMBAT_MESSAGE_RANGE)
+				log_combat(user, target, "disarms [target_held_item]")
+			else
+				target.visible_message("<span class='danger'>[user.name] kicks [target.name] onto [target.p_their()] side!</span>",
+									"<span class='danger'>[user.name] kicks you onto your side!</span>", null, COMBAT_MESSAGE_RANGE)
+				log_combat(user, target, "kicks", "onto their side (paralyzing)")
+			target.Paralyze(SHOVE_CHAIN_PARALYZE) //duration slightly shorter than disarm cd
 		if(shove_blocked && !target.is_shove_knockdown_blocked() && !target.buckled)
 			var/directional_blocked = FALSE
 			if(shove_dir in GLOB.cardinals) //Directional checks to make sure that we're not shoving through a windoor or something like that
@@ -1518,15 +1595,14 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 						if(O.flags_1 & ON_BORDER_1 && O.dir == turn(shove_dir, 180) && O.density)
 							directional_blocked = TRUE
 							break
-			if((!target_table && !target_collateral_human && !target_disposal_bin && !target_pool) || directional_blocked)
+			if((!target_table && !target_collateral_human && !target_disposal_bin && !target_pool && !target.IsKnockdown()) || directional_blocked)
 				target.Knockdown(SHOVE_KNOCKDOWN_SOLID)
-				target.drop_all_held_items()
+				target.Immobilize(SHOVE_IMMOBILIZE_SOLID)
 				user.visible_message("<span class='danger'>[user.name] shoves [target.name], knocking [target.p_them()] down!</span>",
 					"<span class='danger'>You shove [target.name], knocking [target.p_them()] down!</span>", null, COMBAT_MESSAGE_RANGE)
 				log_combat(user, target, "shoved", "knocking them down")
 			else if(target_table)
-				target.Knockdown(SHOVE_KNOCKDOWN_TABLE)
-				target.drop_all_held_items()
+				target.Paralyze(SHOVE_KNOCKDOWN_TABLE)
 				user.visible_message("<span class='danger'>[user.name] shoves [target.name] onto \the [target_table]!</span>",
 					"<span class='danger'>You shove [target.name] onto \the [target_table]!</span>", null, COMBAT_MESSAGE_RANGE)
 				target.throw_at(target_table, 1, 1, null, FALSE) //1 speed throws with no spin are basically just forcemoves with a hard collision check
@@ -1622,7 +1698,7 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 	if(!affecting) //Something went wrong. Maybe the limb is missing?
 		affecting = H.bodyparts[1]
 
-	hit_area = affecting.name
+	hit_area = parse_zone(affecting.body_zone)
 	var/def_zone = affecting.body_zone
 
 	var/armor_block = H.run_armor_check(affecting, "melee", "<span class='notice'>Your armor has protected your [hit_area]!</span>", "<span class='warning'>Your armor has softened a hit to your [hit_area]!</span>",I.armour_penetration)
@@ -2018,7 +2094,8 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 	var/turf/T = get_turf(H)
 	if(!T)
 		return FALSE
-
+	if(ismoth(H) && HAS_TRAIT(H, TRAIT_MOTH_BURNT))
+		return FALSE
 	var/datum/gas_mixture/environment = T.return_air()
 	if(environment && !(environment.return_pressure() > 30) && wings.flight_level <= WINGS_FLYING)
 		to_chat(H, "<span class='warning'>The atmosphere is too thin for you to fly!</span>")
@@ -2055,7 +2132,7 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 		override_float = TRUE
 		H.pass_flags |= PASSTABLE
 		H.update_mobility()
-		if("wings" in H.dna.species.mutant_bodyparts)
+		if(("wings" in H.dna.species.mutant_bodyparts) || ("moth_wings" in H.dna.species.mutant_bodyparts))
 			H.Togglewings()
 	else
 		stunmod *= 0.5
@@ -2063,7 +2140,7 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 		H.setMovetype(H.movement_type & ~FLYING)
 		override_float = FALSE
 		H.pass_flags &= ~PASSTABLE
-		if("wingsopen" in H.dna.species.mutant_bodyparts)
+		if(("wingsopen" in H.dna.species.mutant_bodyparts) || ("moth_wingsopen" in H.dna.species.mutant_bodyparts))
 			H.Togglewings()
 		if(isturf(H.loc))
 			var/turf/T = H.loc
@@ -2105,4 +2182,55 @@ GLOBAL_LIST_EMPTY(roundstart_races)
 	return
 
 /datum/species/proc/get_harm_descriptors()
+	return
+
+/datum/species/proc/z_impact_damage(mob/living/carbon/human/H, turf/T, levels)
+	H.apply_general_zimpact_damage(T, levels)
+	if(levels < 2)
+		return
+	// SPLAT!
+	// 5: 50%, 4: 32%, 3: 18%
+	if(levels >= 3 && prob(min((levels ** 2) * 2, 50)))
+		H.gib()
+		return
+	// owie
+	// 5: 60%, 4: 45%, 3: 30%, 2: 15%
+	if(prob(min((levels - 1) * 15, 75)))
+		if(levels >= 3 && prob(25))
+			for(var/selected_part in list(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM, BODY_ZONE_L_LEG, BODY_ZONE_R_LEG))
+				var/obj/item/bodypart/bp = H.get_bodypart(selected_part)
+				if(bp)
+					bp.dismember()
+			return
+		var/selected_part = pick(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM, BODY_ZONE_L_LEG, BODY_ZONE_R_LEG)
+		var/obj/item/bodypart/bp = H.get_bodypart(selected_part)
+		if(bp)
+			bp.dismember()
+			return
+
+/datum/species/proc/get_laugh_sound(mob/living/carbon/user)
+	return
+
+/datum/species/proc/get_scream_sound(mob/living/carbon/user)
+	return
+
+/datum/species/proc/get_cough_sound(mob/living/carbon/user)
+	return
+
+/datum/species/proc/get_gasp_sound(mob/living/carbon/user)
+	return
+
+/datum/species/proc/get_sigh_sound(mob/living/carbon/user)
+	return
+
+/datum/species/proc/get_sneeze_sound(mob/living/carbon/user)
+	return
+
+/datum/species/proc/get_sniff_sound(mob/living/carbon/user)
+	return
+
+/datum/species/proc/get_clear_sound(mob/living/carbon/user)
+	return
+
+/datum/species/proc/get_huff_sound(mob/living/carbon/user)
 	return
