@@ -20,6 +20,7 @@ export const COLORS = {
     science: '#9b59b6',
     engineering: '#f1c40f',
     cargo: '#f39c12',
+    service: '#7cc46a',
     centcom: '#00c100',
     other: '#c38312',
   },
@@ -216,16 +217,12 @@ const GASES = [
 
 export const getGasLabel = (gasId, fallbackValue) => {
   const gasSearchString = String(gasId).toLowerCase();
-  const gas = GASES.find(gas => gas.id === gasSearchString
-    || gas.name.toLowerCase() === gasSearchString);
-  return gas && gas.label
-    || fallbackValue
-    || gasId;
+  const gas = GASES.find((gas) => gas.id === gasSearchString || gas.name.toLowerCase() === gasSearchString);
+  return (gas && gas.label) || fallbackValue || gasId;
 };
 
-export const getGasColor = gasId => {
+export const getGasColor = (gasId) => {
   const gasSearchString = String(gasId).toLowerCase();
-  const gas = GASES.find(gas => gas.id === gasSearchString
-    || gas.name.toLowerCase() === gasSearchString);
+  const gas = GASES.find((gas) => gas.id === gasSearchString || gas.name.toLowerCase() === gasSearchString);
   return gas && gas.color;
 };

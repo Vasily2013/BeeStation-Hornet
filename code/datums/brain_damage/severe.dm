@@ -60,7 +60,7 @@
 	lose_text = ""
 	var/paralysis_type
 	var/list/paralysis_traits = list()
-	 //for descriptions
+	//for descriptions
 
 /datum/brain_trauma/severe/paralysis/New(specific_type)
 	if(specific_type)
@@ -104,18 +104,16 @@
 	..()
 	for(var/X in paralysis_traits)
 		ADD_TRAIT(owner, X, "trauma_paralysis")
-	owner.update_disabled_bodyparts()
 
 /datum/brain_trauma/severe/paralysis/on_lose()
 	..()
 	for(var/X in paralysis_traits)
 		REMOVE_TRAIT(owner, X, "trauma_paralysis")
-	owner.update_disabled_bodyparts()
 
 /datum/brain_trauma/severe/paralysis/paraplegic
-	random_gain = FALSE
 	paralysis_type = "legs"
 	resilience = TRAUMA_RESILIENCE_ABSOLUTE
+	trauma_flags = TRAUMA_DEFAULT_FLAGS | TRAUMA_NOT_RANDOM
 
 /datum/brain_trauma/severe/narcolepsy
 	name = "Narcolepsy"
@@ -183,7 +181,7 @@
 				to_chat(owner, "<span class='warning'>You feel sick...</span>")
 			else
 				to_chat(owner, "<span class='warning'>You feel really sick at the thought of being alone!</span>")
-			addtimer(CALLBACK(owner, /mob/living/carbon.proc/vomit, high_stress), 50) //blood vomit if high stress
+			addtimer(CALLBACK(owner, TYPE_PROC_REF(/mob/living/carbon, vomit), high_stress), 50) //blood vomit if high stress
 		if(2)
 			if(!high_stress)
 				to_chat(owner, "<span class='warning'>You can't stop shaking...</span>")
@@ -227,11 +225,11 @@
 	lose_text = "<span class='notice'>You feel in control of your hands again.</span>"
 
 /datum/brain_trauma/severe/discoordination/on_gain()
-	ADD_TRAIT(owner, TRAIT_MONKEYLIKE, TRAUMA_TRAIT)
+	ADD_TRAIT(owner, TRAIT_DISCOORDINATED, TRAUMA_TRAIT)
 	..()
 
 /datum/brain_trauma/severe/discoordination/on_lose()
-	REMOVE_TRAIT(owner, TRAIT_MONKEYLIKE, TRAUMA_TRAIT)
+	REMOVE_TRAIT(owner, TRAIT_DISCOORDINATED, TRAUMA_TRAIT)
 	..()
 
 /datum/brain_trauma/severe/pacifism

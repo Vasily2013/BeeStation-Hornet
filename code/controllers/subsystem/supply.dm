@@ -10,7 +10,7 @@ SUBSYSTEM_DEF(supply)
 	var/list/orderhistory = list()
 	var/ordernum = 1					//order number given to next order
 
-/datum/controller/subsystem/supply/Initialize(timeofday)
+/datum/controller/subsystem/supply/Initialize()
 	ordernum = rand(1, 9000)
 
 	for(var/pack in subtypesof(/datum/supply_pack))
@@ -18,7 +18,7 @@ SUBSYSTEM_DEF(supply)
 		if(!P.contains)
 			continue
 		supply_packs[P.type] = P
-	return ..()
+	return SS_INIT_SUCCESS
 
 /datum/controller/subsystem/supply/fire()
 	var/total_restock_required = 0
@@ -37,7 +37,7 @@ SUBSYSTEM_DEF(supply)
 	while (refill_amount > 0 && length(restock_list))
 		//Reduce the refill amount
 		refill_amount --
-		var/datum/supply_pack/selected = pickweight(restock_list)
+		var/datum/supply_pack/selected = pick_weight(restock_list)
 		selected.current_supply = min(selected.current_supply + 1, selected.max_supply)
 		restock_list -= selected
 	SEND_GLOBAL_SIGNAL(COMSIG_GLOB_RESUPPLY)
